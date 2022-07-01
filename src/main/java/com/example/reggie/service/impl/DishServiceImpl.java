@@ -11,12 +11,14 @@ import com.example.reggie.service.DishService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +34,9 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
 
     @Autowired
     private DishFlavorService dishFlavorService;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
     /***
      * @Description //TODO 保存新增的菜品
      * @return: void
@@ -55,6 +60,10 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
 
         //将口味批量保存到菜品的口味表
         dishFlavorService.saveBatch(flavors);
+
+        //清理redis对应缓存
+        String key = "dish_"+dishDto.getCategoryId()+"_1";
+        redisTemplate.delete(key);
     }
 
     /*** 
@@ -79,22 +88,23 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         dishUpdateWrapper.in(Dish::getId,idList);
         this.remove(dishUpdateWrapper);
 
+
     }
 
     /*** 
      * @Description //TODO 用于修改菜品数据回显
-     * @param id 
+     * @param dishId
      * @return: com.example.reggie.dto.DishDto
      **/
     @Override
-    public DishDto findById(long id) {
+    public DishDto findById(long dishId) {
         //查询菜品基本信息
         LambdaQueryWrapper<Dish> DishQueryWrapper = new LambdaQueryWrapper<>();
-        DishQueryWrapper.eq(Dish::getId,id);
+        DishQueryWrapper.eq(Dish::getId,dishId);
         Dish dish = this.getOne(DishQueryWrapper);
         //查询菜品口味信息
         LambdaQueryWrapper<DishFlavor> dishFlavorQueryWrapper = new LambdaQueryWrapper<>();
-        dishFlavorQueryWrapper.eq(DishFlavor::getDishId,id);
+        dishFlavorQueryWrapper.eq(DishFlavor::getDishId,dishId);
         List<DishFlavor> dishFlavorList = dishFlavorService.list(dishFlavorQueryWrapper);
 
         //将菜品所有信息保存到disDto
@@ -131,12 +141,56 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
 
         //重新添加进菜品口味表
         dishFlavorService.saveBatch(flavors);
+
+        //清除redis对应缓存
+        String key = "dish_"+dishDto.getCategoryId()+"_1";
+        redisTemplate.delete(key);
     }
 
     //查找菜品口味
     @Override
-    public List<DishFlavor> findDishFlavor(long id) {
-        List<DishFlavor> dishFlavorList = dishFlavorService.list(new LambdaQueryWrapper<DishFlavor>().eq(DishFlavor::getDishId, id));
+    public List<DishFlavor> findDishFlavor(long dishId) {
+
+        List<DishFlavor> dishFlavorList = dishFlavorService.list(new LambdaQueryWrapper<DishFlavor>().eq(DishFlavor::getDishId, dishId));
         return dishFlavorList;
+    }
+
+    //根据分类id查询其下所有菜品
+    @Override
+    public List<DishDto> findAllByCategoryId(Long categoryId, Integer status) {
+        //将菜品信息拷贝到dishDto并查询出菜品所对应的口味信息存入对应的dishDto
+        List<DishDto> dishDtos = null;
+
+        String key = "dish_"+categoryId+"_"+status;
+        //从redis获取缓存数据
+        dishDtos = (List<DishDto>)redisTemplate.opsForValue().get(key);
+        //如果存在直接返回
+        if(null!=dishDtos){
+            return dishDtos;
+        }
+        //查询出该分类所有起售中的菜品
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Dish::getCategoryId,categoryId);
+        queryWrapper.eq(Dish::getStatus,1);
+        List<Dish> dishList = this.list(queryWrapper);
+
+
+        dishDtos = dishList.stream().map((item)->{
+            DishDto dishDto = new DishDto();
+            BeanUtils.copyProperties(item,dishDto);
+
+            //根据菜品id查询对应的口味列表
+            Long dishId = item.getId();
+            if(null!=dishId){
+                List<DishFlavor> dishFlavor = this.findDishFlavor(dishId);
+                dishDto.setFlavors(dishFlavor);
+            }
+            return dishDto;
+        }).collect(Collectors.toList());
+
+        //将该分类下所有菜品数据缓存redis
+        redisTemplate.opsForValue().set(key,dishDtos,60, TimeUnit.MINUTES);
+
+        return dishDtos;
     }
 }

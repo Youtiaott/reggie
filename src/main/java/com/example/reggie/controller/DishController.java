@@ -16,11 +16,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.ibatis.annotations.Delete;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +41,9 @@ public class DishController {
 
     @Autowired
     private CategoryService categoryService;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     /*** 
      * @Description //TODO 菜品分页展示
@@ -139,34 +144,14 @@ public class DishController {
     }
 
     /***
-     * @Description //TODO 用于新增套餐功能中显示套餐菜品类型分类展示栏中的菜品
+     * @Description //TODO 查询不同分类下的所有菜品
      * @param categoryId
      * @return: com.example.reggie.common.R<java.util.List<com.example.reggie.entity.Dish>>
      **/
     @GetMapping("/list")
     public R<List<DishDto>> list(long categoryId,Integer status){
-        //查询出该分类所有起售中的菜品
-        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Dish::getCategoryId,categoryId);
-        queryWrapper.eq(Dish::getStatus,1);
-        List<Dish> dishList = dishService.list(queryWrapper);
 
-        //将菜品信息拷贝到dishDto并查询出菜品所对应的口味信息存入对应的dishDto
-        List<DishDto> dishDtos = null;
-
-        dishDtos = dishList.stream().map((item)->{
-            DishDto dishDto = new DishDto();
-            BeanUtils.copyProperties(item,dishDto);
-
-            //根据菜品id查询对应的口味列表
-            Long dishId = item.getId();
-            if(null!=dishId){
-                List<DishFlavor> dishFlavor = dishService.findDishFlavor(dishId);
-                dishDto.setFlavors(dishFlavor);
-            }
-            return dishDto;
-        }).collect(Collectors.toList());
-
+        List<DishDto> dishDtos = dishService.findAllByCategoryId(categoryId, status);
         return R.success(dishDtos);
     }
 

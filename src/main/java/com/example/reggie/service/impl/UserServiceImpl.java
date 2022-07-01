@@ -10,11 +10,13 @@ import com.example.reggie.utils.SMSUtils;
 import com.example.reggie.utils.ValidateCodeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpSession;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -29,7 +31,8 @@ import java.util.Map;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     @Autowired
-    private UserService userService;
+    private RedisTemplate<String,String> redisTemplate;
+
     //发送短信
     @Override
     public String sendMsg(String phone) {
@@ -38,20 +41,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         log.info("验证码:{}",code);
         //发送短信
         //SMSUtils.sendMessage(phone,code);
+
+        //将验证码存入redis并设置有效期
+        redisTemplate.opsForValue().set(phone,code,5, TimeUnit.MINUTES);
         return code;
     }
 
     //登陆验证
     @Override
-    public User loginValida(Map<String, String> map, HttpSession session) {
+    @Transactional//开启事务
+    public User loginValida(Map<String, String> map) {
         String phone = map.get("phone");
         String code = map.get("code");
         
         //判断验证码
-        String code_session = (String)session.getAttribute(phone);
-        if(!code.equals(code_session)){
+        String code_redis = redisTemplate.opsForValue().get(phone);
+        if(!code.equals(code_redis)){
             throw new CodeValidaException("验证码错误或验证码过期！");
         }
+        //判断完成删除redis缓存的code
+        redisTemplate.delete(phone);
 
         //根据手机号查找用户
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
@@ -63,21 +72,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             User user = new User();
             user.setPhone(phone);
             user.setStatus(1);
-            userService.saveUser(user);
+            this.save(user);
             return user;
         }
-        
         return result;
     }
 
-    /*** 
-     * @Description //TODO 保存用户
-     * @param user 
-     * @return: void
-     **/
-    @Transactional//开启事务
-    @Override
-    public void saveUser(User user){
-        this.save(user);
-    }
 }

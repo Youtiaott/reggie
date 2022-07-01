@@ -16,7 +16,6 @@ import java.util.Map;
  */
 public interface UserService extends IService<User> {
     String sendMsg(String phone);
-    User loginValida(Map<String,String> map, HttpSession session);
+    User loginValida(Map<String,String> map);
 
-    void saveUser(User user);
 }
