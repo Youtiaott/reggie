@@ -49,7 +49,7 @@ public class CategoryController {
     }
 
     /*** 
-     * @Description //TODO 添加套餐
+     * @Description //TODO 添加分类
      * @param category 
      * @return: com.example.reggie.common.R<java.lang.String>
      **/
@@ -96,7 +96,7 @@ public class CategoryController {
     }
 
     /***
-     * @Description //TODO 用于添加菜品中的类别列表下拉
+     * @Description //TODO 获取所有分类数据
      * @return: com.example.reggie.common.R<java.lang.String>
      **/
     @GetMapping("/list")

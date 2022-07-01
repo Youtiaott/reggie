@@ -19,8 +19,9 @@ public interface DishService extends IService<Dish> {
 
     public void add(DishDto dishDto);
     public void deleteByIds(Long[] ids);
-    public DishDto findById(long id);
+    public DishDto findById(long dishId);
     public void updataDish(DishDto dishDto);
-    List<DishFlavor> findDishFlavor(long id);
+    List<DishFlavor> findDishFlavor(long dishId);
+    List<DishDto> findAllByCategoryId(Long categoryId, Integer status);
 
 }
