@@ -6,7 +6,7 @@ spring:
       driver-class-name: com.mysql.jdbc.Driver
       url: jdbc:mysql://101.132.79.111:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: root
-      password: wjq200165
+      password: 123
   main:
     # 解决因循环引用导致报错
     allow-circular-references: true
@@ -23,7 +23,7 @@ spring:
   redis:
     host: 42.192.152.233
     port: 6379
-    password: wjq200165
+    password: 123
     timeout: 5000ms # 连接超时时间（毫秒）
     lettuce:
       pool:
