@@ -144,7 +144,7 @@ public class DishController {
     }
 
     /***
-     * @Description //TODO 查询不同分类下的所有菜品
+     * @Description //TODO 查询指定分类下的所有菜品
      * @param categoryId
      * @return: com.example.reggie.common.R<java.util.List<com.example.reggie.entity.Dish>>
      **/
