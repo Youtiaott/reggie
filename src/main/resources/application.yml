@@ -4,17 +4,26 @@ spring:
   datasource:
     druid:
       driver-class-name: com.mysql.jdbc.Driver
-      url: 你的mysql地址
+      url: jdbc:mysql://101.132.79.111:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: root
-      password: 密码
+      password: 123
   main:
     # 解决因循环引用导致报错
     allow-circular-references: true
 
+  #  cloud:
+  #    nacos:
+  #      server-addr: 101.132.79.111:8848 # nacos服务地址
+  #      discovery:
+  #        ip: 42.192.152.233:8080 # 指定当前服务再nacos中的ip地址
+  #    # 设置端口微服务名,注册/调用服务,都是根据这个来的
+  #  application:
+  #    name: reggie # 服务名称
+
   redis:
-    host: redis地址
+    host: 42.192.152.233
     port: 6379
-    password: 密码
+    password: 123
     timeout: 5000ms # 连接超时时间（毫秒）
     lettuce:
       pool:
